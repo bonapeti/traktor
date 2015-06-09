@@ -1,13 +1,16 @@
 package org.traktor.domain;
 
-import reactor.bus.Event;
-import reactor.fn.Consumer;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
 
-public class HeapMemory implements Consumer<Event<Long>> {
+import reactor.fn.Supplier;
+
+
+public class HeapMemory implements Supplier<MemoryUsage> {
 
 	@Override
-	public void accept(Event<Long> t) {
-		System.out.println(Thread.currentThread().getName() + " " + t);
+	public MemoryUsage get() {
+		return ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
 	}
 
 }
