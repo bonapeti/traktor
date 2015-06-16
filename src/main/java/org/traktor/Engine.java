@@ -67,27 +67,24 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 	@Override
 	public void run(String... arg0) throws Exception {
 
-		eventBus.on(Selectors.predicate(new Predicate<Object>() {
-			
-			@Override
-			public boolean test(Object t) {
-				if (!(String.class.isInstance(t))) {
-					return false;
-				}
-				
-				return ((String)t).endsWith(".results");
-			}
-		}), new Consumer<Event<Object>>() {
+		eventBus.on(anyResult(), new Consumer<Event<Object>>() {
 
 			@Override
 			public void accept(Event<Object> e) {
 				System.out.println(Thread.currentThread().getName() + " " + e);
 			}
 		});
-		workers.on(Selectors.$(worker), worker);
-		timer.schedule(new MonitoringRequestFactory<MemoryUsage>(new HeapMemory(), "traktor.local.jvm.heapmemory.used", worker, workers) ,10, TimeUnit.SECONDS);
+		workers.on(anyRequest(), worker);
+		timer.schedule(new MonitoringRequestFactory<MemoryUsage>(new HeapMemory(), "traktor.local.jvm.heapmemory", workers) ,10, TimeUnit.SECONDS);
 	}
-
+	
+	public static Selector<Object> anyResult() {
+		return Selectors.predicate(new EndsWith(".results"));
+	}
+	
+	public static Selector<Object> anyRequest() {
+		return Selectors.predicate(new EndsWith(".requests"));
+	}
 	
 	@Override
 	public void setApplicationContext(ApplicationContext applicationContext)
@@ -98,11 +95,11 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 
 }
 
-class NameEndsWithPredicate implements Predicate<Object> {
+class EndsWith implements Predicate<Object> {
 	
 	private final String end;
 	
-	public NameEndsWithPredicate(String end) {
+	public EndsWith(String end) {
 		this.end = end;
 	}
 	
@@ -120,20 +117,18 @@ class MonitoringRequestFactory<T> implements Consumer<Long> {
 
 	private final Supplier<T> item;
 	private final String name;
-	private final Worker worker;
 	private final EventBus workers;
 	
-	public MonitoringRequestFactory(Supplier<T> item, String name, Worker worker, EventBus workers) {
+	public MonitoringRequestFactory(Supplier<T> item, String name, EventBus workers) {
 		super();
 		this.item = item;
 		this.name = name;
-		this.worker = worker;
 		this.workers = workers;
 	}
 
 	@Override
 	public void accept(Long t) {
-		workers.notify(worker, Event.wrap(item, name + ".results"));
+		workers.notify(name + ".requests", Event.wrap(item, name + ".results"));
 	}
 	
 }
