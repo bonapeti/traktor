@@ -1,4 +1,4 @@
-package org.traktor.domain;
+package org.traktor.domain.local.jvm;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
