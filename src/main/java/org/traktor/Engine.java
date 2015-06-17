@@ -1,6 +1,7 @@
 package org.traktor;
 
-import java.lang.management.MemoryUsage;
+import java.util.Collection;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.BeansException;
@@ -11,8 +12,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
-import org.traktor.domain.HeapMemory;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+import org.traktor.domain.SizeOf;
 import org.traktor.domain.Worker;
+import org.traktor.domain.local.jvm.HeapMemory;
+import org.traktor.domain.local.jvm.NonHeapMemory;
+import org.traktor.domain.local.jvm.ThreadCount;
 
 import reactor.Environment;
 import reactor.bus.Event;
@@ -20,11 +27,16 @@ import reactor.bus.EventBus;
 import reactor.bus.selector.Selector;
 import reactor.bus.selector.Selectors;
 import reactor.fn.Consumer;
+import reactor.fn.Pausable;
 import reactor.fn.Predicate;
 import reactor.fn.Supplier;
 import reactor.fn.timer.Timer;
 
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
+
 @SpringBootApplication
+@RestController
 public class Engine implements CommandLineRunner, ApplicationContextAware {
 	
 	@Autowired
@@ -39,7 +51,12 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 	@Autowired
 	private Worker worker;
 	
+	@Autowired
+	private MetricRegistry metrics;
+	
 	ApplicationContext applicationContext;
+	
+	private ConcurrentHashMap<String,Pausable> items = new ConcurrentHashMap<String,Pausable>();
 	
 	static {
 		Environment.initializeIfEmpty().assignErrorJournal();
@@ -62,11 +79,26 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 	public Timer timer() {
 		return Environment.timer();
 	}
+	
+	@Bean
+	public MetricRegistry metrics() {
+		return new MetricRegistry();
+	}
+	
+	@Bean
+	public Meter monitoringRequests() {
+		return metrics().meter("monitoringRequests");
+	}
 
+	@RequestMapping(method=RequestMethod.GET)
+    public Collection<String> monitoredItem() {
+        return items.keySet();
+    }
+	
 	
 	@Override
 	public void run(String... arg0) throws Exception {
-
+		
 		eventBus.on(anyResult(), new Consumer<Event<Object>>() {
 
 			@Override
@@ -75,7 +107,17 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 			}
 		});
 		workers.on(anyRequest(), worker);
-		timer.schedule(new MonitoringRequestFactory<MemoryUsage>(new HeapMemory(), "traktor.local.jvm.heapmemory", workers) ,10, TimeUnit.SECONDS);
+
+		long period = 10;
+		
+		addItem("traktor.local.internal.numberofitems", new SizeOf(items), period);
+		addItem("traktor.local.jvm.threadcount", new ThreadCount(), period);
+		addItem("traktor.local.jvm.heapmemory", new HeapMemory(), period);
+		addItem("traktor.local.jvm.nonheapmemory", new NonHeapMemory(), period);
+	}
+	
+	private <T> void addItem(String name, Supplier<T> supplier, long secondPeriod) {
+		items.put(name, timer.schedule(new MonitoringRequestFactory<T>(supplier, name, workers) , secondPeriod, TimeUnit.SECONDS));
 	}
 	
 	public static Selector<Object> anyResult() {
