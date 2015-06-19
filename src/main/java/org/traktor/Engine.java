@@ -1,9 +1,6 @@
 package org.traktor;
 
 import java.util.Collection;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,9 +26,7 @@ import reactor.bus.EventBus;
 import reactor.bus.selector.Selector;
 import reactor.bus.selector.Selectors;
 import reactor.fn.Consumer;
-import reactor.fn.Pausable;
 import reactor.fn.Predicate;
-import reactor.fn.Supplier;
 import reactor.fn.timer.Timer;
 
 import com.codahale.metrics.Meter;
