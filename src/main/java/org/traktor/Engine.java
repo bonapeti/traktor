@@ -1,6 +1,7 @@
 package org.traktor;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -15,8 +16,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
-import org.traktor.domain.SizeOf;
+import org.traktor.domain.Items;
 import org.traktor.domain.Worker;
+import org.traktor.domain.local.internal.NumberOfItems;
 import org.traktor.domain.local.jvm.HeapMemory;
 import org.traktor.domain.local.jvm.NonHeapMemory;
 import org.traktor.domain.local.jvm.ThreadCount;
@@ -46,17 +48,12 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 	private EventBus workers;
 	
 	@Autowired
-	private Timer timer;
-	
-	@Autowired
 	private Worker worker;
 	
 	@Autowired
 	private MetricRegistry metrics;
 	
 	ApplicationContext applicationContext;
-	
-	private ConcurrentHashMap<String,Pausable> items = new ConcurrentHashMap<String,Pausable>();
 	
 	static {
 		Environment.initializeIfEmpty().assignErrorJournal();
@@ -66,6 +63,12 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 		SpringApplication.run(Engine.class, args);
 	}
 
+	@Autowired
+	private Items items;
+	
+	@Autowired
+	private NumberOfItems numberOfItems;
+	
 	@Bean
 	public EventBus eventBus() {
 		return EventBus.create();
@@ -92,7 +95,7 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 
 	@RequestMapping(method=RequestMethod.GET)
     public Collection<String> monitoredItem() {
-        return items.keySet();
+        return items.getNames();
     }
 	
 	
@@ -110,15 +113,13 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 
 		long period = 10;
 		
-		addItem("traktor.local.internal.numberofitems", new SizeOf(items), period);
-		addItem("traktor.local.jvm.threadcount", new ThreadCount(), period);
-		addItem("traktor.local.jvm.heapmemory", new HeapMemory(), period);
-		addItem("traktor.local.jvm.nonheapmemory", new NonHeapMemory(), period);
+		items.addItem("traktor.local.internal.numberofitems", numberOfItems, period);
+		items.addItem("traktor.local.jvm.threadcount", new ThreadCount(), period);
+		items.addItem("traktor.local.jvm.heapmemory", new HeapMemory(), period);
+		items.addItem("traktor.local.jvm.nonheapmemory", new NonHeapMemory(), period);
 	}
 	
-	private <T> void addItem(String name, Supplier<T> supplier, long secondPeriod) {
-		items.put(name, timer.schedule(new MonitoringRequestFactory<T>(supplier, name, workers) , secondPeriod, TimeUnit.SECONDS));
-	}
+	
 	
 	public static Selector<Object> anyResult() {
 		return Selectors.predicate(new EndsWith(".results"));
@@ -155,22 +156,3 @@ class EndsWith implements Predicate<Object> {
 	}
 }
 
-class MonitoringRequestFactory<T> implements Consumer<Long> {
-
-	private final Supplier<T> item;
-	private final String name;
-	private final EventBus workers;
-	
-	public MonitoringRequestFactory(Supplier<T> item, String name, EventBus workers) {
-		super();
-		this.item = item;
-		this.name = name;
-		this.workers = workers;
-	}
-
-	@Override
-	public void accept(Long t) {
-		workers.notify(name + ".requests", Event.wrap(item, name + ".results"));
-	}
-	
-}
