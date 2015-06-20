@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.traktor.domain.Items;
 import org.traktor.domain.Worker;
-import org.traktor.domain.local.internal.NumberOfItems;
 import org.traktor.domain.local.jvm.HeapMemory;
 import org.traktor.domain.local.jvm.NonHeapMemory;
 import org.traktor.domain.local.jvm.ThreadCount;
@@ -27,6 +26,7 @@ import reactor.bus.selector.Selector;
 import reactor.bus.selector.Selectors;
 import reactor.fn.Consumer;
 import reactor.fn.Predicate;
+import reactor.fn.Supplier;
 import reactor.fn.timer.Timer;
 
 import com.codahale.metrics.Meter;
@@ -60,9 +60,6 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 
 	@Autowired
 	private Items items;
-	
-	@Autowired
-	private NumberOfItems numberOfItems;
 	
 	@Bean
 	public EventBus eventBus() {
@@ -108,7 +105,14 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 
 		long period = 10;
 		
-		items.addItem("traktor.local.internal.numberofitems", numberOfItems, period);
+		items.addItem("traktor.local.internal.numberofitems", new Supplier<Integer>() {
+
+			@Override
+			public Integer get() {
+				return items.size();
+			}
+			
+		}, period);
 		items.addItem("traktor.local.jvm.threadcount", new ThreadCount(), period);
 		items.addItem("traktor.local.jvm.heapmemory", new HeapMemory(), period);
 		items.addItem("traktor.local.jvm.nonheapmemory", new NonHeapMemory(), period);
