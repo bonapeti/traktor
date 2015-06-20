@@ -60,6 +60,9 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 	@Autowired
 	private Items items;
 	
+	@Autowired
+	private Meter monitoringRequests;
+	
 	@Bean
 	public EventBus eventBus() {
 		return EventBus.create();
@@ -93,13 +96,8 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 	@Override
 	public void run(String... arg0) throws Exception {
 		
-		eventBus.on(anyResult(), new Consumer<Event<Object>>() {
-
-			@Override
-			public void accept(Event<Object> e) {
-				System.out.println(Thread.currentThread().getName() + " " + e);
-			}
-		});
+		//eventBus.on(anyResult(), new EventPrinter());
+		eventBus.on(Selectors.$("traktor.local.internal.monitoringrequests.rate.oneminute.results"), new EventPrinter());
 		workers.on(anyRequest(), worker);
 
 		addInternalItems();
@@ -108,11 +106,43 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 	private void addInternalItems() {
 		long period = 10;
 		
-		items.addItem("traktor.local.internal.numberofitems", new Supplier<Integer>() {
+		items.addItem("traktor.local.internal.items.count", new Supplier<Integer>() {
 
 			@Override
 			public Integer get() {
 				return items.size();
+			}
+			
+		}, period);
+		items.addItem("traktor.local.internal.monitoringrequests.rate.mean", new Supplier<Double>() {
+
+			@Override
+			public Double get() {
+				return monitoringRequests.getMeanRate();
+			}
+			
+		}, period);
+		items.addItem("traktor.local.internal.monitoringrequests.rate.oneminute", new Supplier<Double>() {
+
+			@Override
+			public Double get() {
+				return monitoringRequests.getOneMinuteRate();
+			}
+			
+		}, period);
+		items.addItem("traktor.local.internal.monitoringrequests.rate.fiveminute", new Supplier<Double>() {
+
+			@Override
+			public Double get() {
+				return monitoringRequests.getFiveMinuteRate();
+			}
+			
+		}, period);
+		items.addItem("traktor.local.internal.monitoringrequests.rate.fifteenminute", new Supplier<Double>() {
+
+			@Override
+			public Double get() {
+				return monitoringRequests.getFifteenMinuteRate();
 			}
 			
 		}, period);
@@ -124,7 +154,23 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 			}
 			
 		}, period);
-		items.addItem("traktor.local.jvm.heapmemory", new Supplier<MemoryUsage>() {
+		items.addItem("traktor.local.jvm.peakthreadcount", new Supplier<Integer>() {
+
+			@Override
+			public Integer get() {
+				return ManagementFactory.getThreadMXBean().getPeakThreadCount();
+			}
+			
+		}, period);
+		items.addItem("traktor.local.jvm.daemonthreadcount", new Supplier<Integer>() {
+
+			@Override
+			public Integer get() {
+				return ManagementFactory.getThreadMXBean().getDaemonThreadCount();
+			}
+			
+		}, period);
+		items.addItem("traktor.local.jvm.memory.heap", new Supplier<MemoryUsage>() {
 
 			@Override
 			public MemoryUsage get() {
@@ -132,7 +178,7 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 			}
 			
 		}, period);
-		items.addItem("traktor.local.jvm.nonheapmemory", new Supplier<MemoryUsage>() {
+		items.addItem("traktor.local.jvm.memory.nonheap", new Supplier<MemoryUsage>() {
 
 			@Override
 			public MemoryUsage get() {
@@ -179,3 +225,10 @@ class EndsWith implements Predicate<Object> {
 	}
 }
 
+class EventPrinter implements Consumer<Event<Object>> {
+
+	@Override
+	public void accept(Event<Object> e) {
+		System.out.println(e.getKey() + "=" + e.getData());
+	}
+}
