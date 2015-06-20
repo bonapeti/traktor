@@ -1,5 +1,7 @@
 package org.traktor;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
 import java.util.Collection;
 
 import org.springframework.beans.BeansException;
@@ -15,9 +17,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.traktor.domain.Items;
 import org.traktor.domain.Worker;
-import org.traktor.domain.local.jvm.HeapMemory;
-import org.traktor.domain.local.jvm.NonHeapMemory;
-import org.traktor.domain.local.jvm.ThreadCount;
 
 import reactor.Environment;
 import reactor.bus.Event;
@@ -103,6 +102,10 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 		});
 		workers.on(anyRequest(), worker);
 
+		addInternalItems();
+	}
+
+	private void addInternalItems() {
 		long period = 10;
 		
 		items.addItem("traktor.local.internal.numberofitems", new Supplier<Integer>() {
@@ -113,9 +116,30 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 			}
 			
 		}, period);
-		items.addItem("traktor.local.jvm.threadcount", new ThreadCount(), period);
-		items.addItem("traktor.local.jvm.heapmemory", new HeapMemory(), period);
-		items.addItem("traktor.local.jvm.nonheapmemory", new NonHeapMemory(), period);
+		items.addItem("traktor.local.jvm.threadcount", new Supplier<Integer>() {
+
+			@Override
+			public Integer get() {
+				return ManagementFactory.getThreadMXBean().getThreadCount();
+			}
+			
+		}, period);
+		items.addItem("traktor.local.jvm.heapmemory", new Supplier<MemoryUsage>() {
+
+			@Override
+			public MemoryUsage get() {
+				return ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+			}
+			
+		}, period);
+		items.addItem("traktor.local.jvm.nonheapmemory", new Supplier<MemoryUsage>() {
+
+			@Override
+			public MemoryUsage get() {
+				return ManagementFactory.getMemoryMXBean().getNonHeapMemoryUsage();
+			}
+			
+		}, period);
 	}
 	
 	
