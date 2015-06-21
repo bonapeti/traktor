@@ -96,9 +96,17 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 	@Override
 	public void run(String... arg0) throws Exception {
 		
-		//eventBus.on(anyResult(), new EventPrinter());
-		eventBus.on(Selectors.$("traktor.local.internal.monitoringrequests.rate.oneminute.results"), new EventPrinter());
+		eventBus.on(anyResult(), new EventPrinter());
+		//eventBus.on(Selectors.$("traktor.local.internal.monitoringrequests.rate.oneminute.results"), new EventPrinter());
 		workers.on(anyRequest(), worker);
+		workers.on(anyRequest(), new Consumer<Event<Supplier<Object>>>() {
+			
+			@Override
+			public void accept(Event<Supplier<Object>> t) {
+				monitoringRequests.mark();
+			}
+
+		});
 
 		addInternalItems();
 	}
