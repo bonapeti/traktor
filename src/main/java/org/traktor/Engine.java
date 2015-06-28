@@ -1,5 +1,6 @@
 package org.traktor;
 
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 import java.util.Collection;
@@ -12,6 +13,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
+import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,22 +33,20 @@ import reactor.fn.timer.Timer;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
 
 @SpringBootApplication
 @RestController
 public class Engine implements CommandLineRunner, ApplicationContextAware {
 	
 	@Autowired
-	private EventBus eventBus;
-	
-	@Autowired
 	private EventBus workers;
 	
 	@Autowired
 	private Worker worker;
-	
-	@Autowired
-	private MetricRegistry metrics;
 	
 	ApplicationContext applicationContext;
 	
@@ -88,15 +89,35 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 	}
 
 	@RequestMapping(method=RequestMethod.GET)
-    public Collection<String> monitoredItem() {
+    public Collection<Item<?>> item() {
         return items.getNames();
     }
+	
+	@Bean
+	@Primary
+	public Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder() {
+		return new Jackson2ObjectMapperBuilder().serializerByType(Item.class, new JsonSerializer<Item<?>>() {
+
+			@Override
+			public void serialize(Item<?> item, JsonGenerator jgen, SerializerProvider provider)
+					throws IOException, JsonProcessingException {
+				jgen.writeStartObject();
+		        jgen.writeStringField("name", item.getName());
+		        Object lastValue = item.getLastValue();
+		        if (lastValue != null) {
+		        	jgen.writeObjectField("last", lastValue);
+		        }
+		        jgen.writeEndObject();
+			}
+			
+		}).indentOutput(true);
+	}
 	
 	
 	@Override
 	public void run(String... arg0) throws Exception {
 		
-		eventBus.on(anyResult(), new EventPrinter());
+		//eventBus.on(anyResult(), new EventPrinter());
 		//eventBus.on(Selectors.$("traktor.local.internal.monitoringrequests.rate.oneminute.results"), new EventPrinter());
 		workers.on(anyRequest(), worker);
 		workers.on(anyRequest(), new Consumer<Event<Supplier<Object>>>() {

@@ -1,17 +1,19 @@
 package org.traktor.domain;
 
 import java.util.Collection;
-import java.util.Map;
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.traktor.Item;
 
 import reactor.bus.Event;
 import reactor.bus.EventBus;
+import reactor.bus.selector.Selectors;
 import reactor.fn.Consumer;
-import reactor.fn.Pausable;
 import reactor.fn.Supplier;
 import reactor.fn.timer.Timer;
 
@@ -19,23 +21,28 @@ import reactor.fn.timer.Timer;
 public class Items {
 
 	@Autowired
+	private EventBus eventBus;
+	
+	@Autowired
 	private EventBus workers;
 	
 	@Autowired
 	private Timer timer;
 
-	private Map<String,Pausable> items = new ConcurrentHashMap<String,Pausable>();
+	private Set<Item<?>> items = Collections.newSetFromMap(new ConcurrentHashMap<Item<?>,Boolean>());
 	
 	public int size() {
 		return items.size();
 	}
 
-	public Collection<String> getNames() {
-		return items.keySet();
+	public Collection<Item<?>> getNames() {
+		return items;
 	}
 	
 	public <T> void addItem(String name, Supplier<T> supplier, long secondPeriod) {
-		items.put(name, timer.schedule(new MonitoringRequestFactory<T>(supplier, name, workers) , secondPeriod, TimeUnit.SECONDS));
+		Item<T> item = new Item<T>(name, timer.schedule(new MonitoringRequestFactory<T>(supplier, name, workers) , secondPeriod, TimeUnit.SECONDS));
+		eventBus.on(Selectors.$(name + ".results"), item);
+		items.add(item);
 	}
 	
 }
