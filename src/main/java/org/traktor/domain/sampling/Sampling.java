@@ -1,4 +1,4 @@
-package org.traktor;
+package org.traktor.domain.sampling;
 
 import java.io.Serializable;
 
@@ -6,14 +6,14 @@ import reactor.bus.Event;
 import reactor.fn.Consumer;
 import reactor.fn.Pausable;
 
-public class Item<T> implements Serializable, Consumer<Event<T>>{
+public class Sampling<T> implements Serializable, Consumer<Event<T>>{
 
 	private static final long serialVersionUID = 1840597639832443897L;
 	
 	private final String name;
 	private T lastValue;
 	
-	public Item(String name, Pausable pausable) {
+	public Sampling(String name, Pausable pausable) {
 		super();
 		this.name = name;
 	}
@@ -34,7 +34,7 @@ public class Item<T> implements Serializable, Consumer<Event<T>>{
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		Item<?> other = (Item<?>) obj;
+		Sampling<?> other = (Sampling<?>) obj;
 		if (name == null) {
 			if (other.name != null)
 				return false;

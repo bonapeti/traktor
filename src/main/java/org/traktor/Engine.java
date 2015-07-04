@@ -3,7 +3,6 @@ package org.traktor;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
-import java.util.Collection;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,11 +14,16 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
-import org.traktor.domain.Items;
 import org.traktor.domain.Worker;
+import org.traktor.domain.sampling.Sampling;
+import org.traktor.domain.sampling.Scheduler;
+
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
 
 import reactor.Environment;
 import reactor.bus.Event;
@@ -31,15 +35,7 @@ import reactor.fn.Predicate;
 import reactor.fn.Supplier;
 import reactor.fn.timer.Timer;
 
-import com.codahale.metrics.Meter;
-import com.codahale.metrics.MetricRegistry;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-
 @SpringBootApplication
-@RestController
 public class Engine implements CommandLineRunner, ApplicationContextAware {
 	
 	@Autowired
@@ -59,7 +55,7 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 	}
 
 	@Autowired
-	private Items items;
+	private Scheduler scheduler;
 	
 	@Autowired
 	private Meter monitoringRequests;
@@ -87,19 +83,14 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 	public Meter monitoringRequests() {
 		return metrics().meter("monitoringRequests");
 	}
-
-	@RequestMapping(method=RequestMethod.GET)
-    public Collection<Item<?>> item() {
-        return items.getNames();
-    }
 	
 	@Bean
 	@Primary
 	public Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder() {
-		return new Jackson2ObjectMapperBuilder().serializerByType(Item.class, new JsonSerializer<Item<?>>() {
+		return new Jackson2ObjectMapperBuilder().serializerByType(Sampling.class, new JsonSerializer<Sampling<?>>() {
 
 			@Override
-			public void serialize(Item<?> item, JsonGenerator jgen, SerializerProvider provider)
+			public void serialize(Sampling<?> item, JsonGenerator jgen, SerializerProvider provider)
 					throws IOException, JsonProcessingException {
 				jgen.writeStartObject();
 		        jgen.writeStringField("name", item.getName());
@@ -129,21 +120,21 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 
 		});
 
-		addInternalItems();
+		scheduleInternalMonitoring();
 	}
 
-	private void addInternalItems() {
+	private void scheduleInternalMonitoring() {
 		long period = 10;
 		
-		items.addItem("traktor.local.internal.items.count", new Supplier<Integer>() {
+		scheduler.schedule("traktor.local.internal.items.count", new Supplier<Integer>() {
 
 			@Override
 			public Integer get() {
-				return items.size();
+				return scheduler.size();
 			}
 			
 		}, period);
-		items.addItem("traktor.local.internal.monitoringrequests.rate.mean", new Supplier<Double>() {
+		scheduler.schedule("traktor.local.internal.monitoringrequests.rate.mean", new Supplier<Double>() {
 
 			@Override
 			public Double get() {
@@ -151,7 +142,7 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 			}
 			
 		}, period);
-		items.addItem("traktor.local.internal.monitoringrequests.rate.oneminute", new Supplier<Double>() {
+		scheduler.schedule("traktor.local.internal.monitoringrequests.rate.oneminute", new Supplier<Double>() {
 
 			@Override
 			public Double get() {
@@ -159,7 +150,7 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 			}
 			
 		}, period);
-		items.addItem("traktor.local.internal.monitoringrequests.rate.fiveminute", new Supplier<Double>() {
+		scheduler.schedule("traktor.local.internal.monitoringrequests.rate.fiveminute", new Supplier<Double>() {
 
 			@Override
 			public Double get() {
@@ -167,7 +158,7 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 			}
 			
 		}, period);
-		items.addItem("traktor.local.internal.monitoringrequests.rate.fifteenminute", new Supplier<Double>() {
+		scheduler.schedule("traktor.local.internal.monitoringrequests.rate.fifteenminute", new Supplier<Double>() {
 
 			@Override
 			public Double get() {
@@ -175,7 +166,7 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 			}
 			
 		}, period);
-		items.addItem("traktor.local.jvm.threadcount", new Supplier<Integer>() {
+		scheduler.schedule("traktor.local.jvm.threadcount", new Supplier<Integer>() {
 
 			@Override
 			public Integer get() {
@@ -183,7 +174,7 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 			}
 			
 		}, period);
-		items.addItem("traktor.local.jvm.peakthreadcount", new Supplier<Integer>() {
+		scheduler.schedule("traktor.local.jvm.peakthreadcount", new Supplier<Integer>() {
 
 			@Override
 			public Integer get() {
@@ -191,7 +182,7 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 			}
 			
 		}, period);
-		items.addItem("traktor.local.jvm.daemonthreadcount", new Supplier<Integer>() {
+		scheduler.schedule("traktor.local.jvm.daemonthreadcount", new Supplier<Integer>() {
 
 			@Override
 			public Integer get() {
@@ -199,7 +190,7 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 			}
 			
 		}, period);
-		items.addItem("traktor.local.jvm.memory.heap", new Supplier<MemoryUsage>() {
+		scheduler.schedule("traktor.local.jvm.memory.heap", new Supplier<MemoryUsage>() {
 
 			@Override
 			public MemoryUsage get() {
@@ -207,7 +198,7 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 			}
 			
 		}, period);
-		items.addItem("traktor.local.jvm.memory.nonheap", new Supplier<MemoryUsage>() {
+		scheduler.schedule("traktor.local.jvm.memory.nonheap", new Supplier<MemoryUsage>() {
 
 			@Override
 			public MemoryUsage get() {
