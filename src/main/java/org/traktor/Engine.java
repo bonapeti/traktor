@@ -14,6 +14,7 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.traktor.domain.Observation;
 import org.traktor.domain.Worker;
 import org.traktor.domain.sampling.Sampling;
 import org.traktor.domain.sampling.Scheduler;
@@ -90,15 +91,30 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 		return new Jackson2ObjectMapperBuilder().serializerByType(Sampling.class, new JsonSerializer<Sampling<?>>() {
 
 			@Override
-			public void serialize(Sampling<?> item, JsonGenerator jgen, SerializerProvider provider)
+			public void serialize(Sampling<?> sampling, JsonGenerator jgen, SerializerProvider provider)
 					throws IOException, JsonProcessingException {
 				jgen.writeStartObject();
-		        jgen.writeStringField("name", item.getName());
-		        Object lastValue = item.getLastValue();
+		        jgen.writeStringField("name", sampling.getName());
+		        Object lastValue = sampling.getLastValue();
 		        if (lastValue != null) {
 		        	jgen.writeObjectField("last", lastValue);
 		        }
 		        jgen.writeEndObject();
+			}
+			
+		}).serializerByType(Observation.class, 	new JsonSerializer<Observation>() {
+
+			@Override
+			public void serialize(Observation observation, JsonGenerator jgen, SerializerProvider provider)
+					throws IOException, JsonProcessingException {
+				jgen.writeStartObject();
+		        jgen.writeStringField("time", observation.getTime().toString());
+		        Object value = observation.getValue();
+		        if (value != null) {
+		        	jgen.writeObjectField("value", value);
+		        }
+		        jgen.writeEndObject();
+				
 			}
 			
 		}).indentOutput(true);

@@ -1,5 +1,7 @@
 package org.traktor.domain;
 
+import java.util.Date;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -16,7 +18,7 @@ public class Worker implements Consumer<Event<Supplier<Object>>> {
 	
 	@Override
 	public void accept(Event<Supplier<Object>> t) {
-		eventBus.notify(t.getReplyTo(), Event.wrap(t.getData().get()));
+		eventBus.notify(t.getReplyTo(), Event.wrap(new Observation(t.getData().get(), new Date())));
 	}
 
 }
