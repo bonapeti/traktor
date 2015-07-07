@@ -120,6 +120,7 @@ public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner
 		        if (value != null) {
 		        	jgen.writeObjectField("value", value);
 		        }
+		        jgen.writeStringField("duration", Long.toString(observation.getDuration()));
 		        jgen.writeEndObject();
 				
 			}

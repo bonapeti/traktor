@@ -4,6 +4,7 @@ import java.util.Date;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StopWatch;
 
 import reactor.bus.Event;
 import reactor.bus.EventBus;
@@ -18,7 +19,11 @@ public class Worker implements Consumer<Event<Supplier<Object>>> {
 	
 	@Override
 	public void accept(Event<Supplier<Object>> t) {
-		eventBus.notify(t.getReplyTo(), Event.wrap(new Observation(t.getData().get(), new Date())));
+		StopWatch stopWatch = new StopWatch();
+		stopWatch.start();
+		Object value = t.getData().get();
+		stopWatch.stop();
+		eventBus.notify(t.getReplyTo(), Event.wrap(new Observation(value, new Date(), stopWatch.getLastTaskTimeMillis())));
 	}
 
 }
