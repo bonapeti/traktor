@@ -14,6 +14,8 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 import org.traktor.domain.Observation;
 import org.traktor.domain.Worker;
 import org.traktor.domain.sampling.Sampling;
@@ -37,7 +39,7 @@ import reactor.fn.Supplier;
 import reactor.fn.timer.Timer;
 
 @SpringBootApplication
-public class Engine implements CommandLineRunner, ApplicationContextAware {
+public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner, ApplicationContextAware {
 	
 	@Autowired
 	private EventBus workers;
@@ -85,6 +87,11 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 		return metrics().meter("monitoringRequests");
 	}
 	
+	@Override
+	public void configurePathMatch(PathMatchConfigurer configurer) {
+		configurer.setUseSuffixPatternMatch(false);
+	}
+	
 	@Bean
 	@Primary
 	public Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder() {
@@ -95,7 +102,7 @@ public class Engine implements CommandLineRunner, ApplicationContextAware {
 					throws IOException, JsonProcessingException {
 				jgen.writeStartObject();
 		        jgen.writeStringField("name", sampling.getName());
-		        Object lastValue = sampling.getLastValue();
+		        Observation lastValue = sampling.getLastObservation();
 		        if (lastValue != null) {
 		        	jgen.writeObjectField("last", lastValue);
 		        }

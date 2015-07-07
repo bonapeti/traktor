@@ -2,6 +2,8 @@ package org.traktor.domain.sampling;
 
 import java.io.Serializable;
 
+import org.traktor.domain.Observation;
+
 import reactor.bus.Event;
 import reactor.fn.Consumer;
 import reactor.fn.Pausable;
@@ -11,7 +13,7 @@ public class Sampling<T> implements Serializable, Consumer<Event<T>>{
 	private static final long serialVersionUID = 1840597639832443897L;
 	
 	private final String name;
-	private T lastValue;
+	private Observation lastObservation;
 	
 	public Sampling(String name, Pausable pausable) {
 		super();
@@ -45,15 +47,15 @@ public class Sampling<T> implements Serializable, Consumer<Event<T>>{
 
 	@Override
 	public void accept(Event<T> monitoringEvent) {
-		this.lastValue = monitoringEvent.getData();
+		this.lastObservation = (Observation)monitoringEvent.getData();
 	}
 
 	public String getName() {
 		return name;
 	}
 
-	public T getLastValue() {
-		return lastValue;
+	public Observation getLastObservation() {
+		return lastObservation;
 	}
 	
 	
