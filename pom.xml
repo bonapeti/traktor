@@ -47,4 +47,5 @@
 			<version>3.1.2</version>
 		</dependency>
 	</dependencies>
+	<name>Traktor Engine</name>
 </project>
