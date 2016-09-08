@@ -4,20 +4,21 @@ import java.io.Serializable;
 
 import org.traktor.domain.Observation;
 
-import reactor.bus.Event;
-import reactor.fn.Consumer;
-import reactor.fn.Pausable;
 
-public class Sampling<T> implements Serializable, Consumer<Event<T>>{
+import reactor.core.Cancellation;
+
+public class Sampling<T> implements Serializable{
 
 	private static final long serialVersionUID = 1840597639832443897L;
 	
 	private final String name;
 	private Observation lastObservation;
+	private final Cancellation cancellation;
 	
-	public Sampling(String name, Pausable pausable) {
+	public Sampling(String name, Cancellation cancellation) {
 		super();
 		this.name = name;
+		this.cancellation = cancellation;
 	}
 
 	@Override
@@ -43,11 +44,6 @@ public class Sampling<T> implements Serializable, Consumer<Event<T>>{
 		} else if (!name.equals(other.name))
 			return false;
 		return true;
-	}
-
-	@Override
-	public void accept(Event<T> monitoringEvent) {
-		this.lastObservation = (Observation)monitoringEvent.getData();
 	}
 
 	public String getName() {
