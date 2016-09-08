@@ -1,14 +1,15 @@
 package org.traktor.domain;
 
-import java.util.Date;
+import java.time.Duration;
+import java.time.Instant;
 
 public class Observation {
-
-	private final Object value;
-	private final Date time;
-	private final long duration;
 	
-	public Observation(Object value, Date time, long duration) {
+	private final Object value;
+	private final Instant time;
+	private final Duration duration;
+	
+	public Observation(Object value, Instant time, Duration duration) {
 		super();
 		this.value = value;
 		this.time = time;
@@ -19,13 +20,11 @@ public class Observation {
 		return value;
 	}
 
-	public Date getTime() {
+	public Instant getTime() {
 		return time;
 	}
 
-	public long getDuration() {
+	public Duration getDuration() {
 		return duration;
 	}
-	
-	
 }

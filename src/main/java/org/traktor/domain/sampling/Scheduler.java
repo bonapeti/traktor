@@ -1,10 +1,12 @@
 package org.traktor.domain.sampling;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,27 +14,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.traktor.domain.Observation;
+import org.traktor.domain.Request;
 
-import reactor.bus.Event;
-import reactor.bus.EventBus;
-import reactor.bus.selector.Selectors;
-import reactor.fn.Consumer;
-import reactor.fn.Supplier;
-import reactor.fn.timer.Timer;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.TopicProcessor;
+import reactor.core.scheduler.Schedulers;
+
 
 @RestController
 public class Scheduler {
 
-	@Autowired
-	private EventBus eventBus;
-	
-	@Autowired
-	private EventBus workers;
-	
-	@Autowired
-	private Timer timer;
-
 	private Set<Sampling<?>> samplings = Collections.newSetFromMap(new ConcurrentHashMap<Sampling<?>,Boolean>());
+	
+	@Autowired
+	private TopicProcessor<Request<?>> requestTopic;
 	
 	@RequestMapping(value="/sampling", method=RequestMethod.GET)
     public Collection<Sampling<?>> samplings() {
@@ -64,29 +59,31 @@ public class Scheduler {
 	}
 	
 	public <T> void schedule(String name, Supplier<T> supplier, long secondPeriod) {
-		Sampling<T> sampling = new Sampling<T>(name, timer.schedule(new AlarmClock<T>(supplier, name, workers) , secondPeriod, TimeUnit.SECONDS));
-		eventBus.on(Selectors.$(name + ".results"), sampling);
+
+		Flux<Request<T>> flux = Flux.intervalMillis(0l, 1000l * secondPeriod).map((time) ->  new Request<T>(Instant.now(), supplier)).publishOn(Schedulers.parallel()).log();
+		
+		Sampling<T> sampling = new Sampling<T>(name, flux.subscribe(new AlarmClock<T>(supplier, name)));
 		samplings.add(sampling);
 	}
 	
 }
 
-class AlarmClock<T> implements Consumer<Long> {
+class AlarmClock<T> implements Consumer<Request<T>> {
 
 	private final Supplier<T> item;
 	private final String name;
-	private final EventBus workers;
 	
-	public AlarmClock(Supplier<T> item, String name, EventBus workers) {
+	public AlarmClock(Supplier<T> item, String name) {
 		super();
 		this.item = item;
 		this.name = name;
-		this.workers = workers;
 	}
-
+	
 	@Override
-	public void accept(Long t) {
-		workers.notify(name + ".requests", Event.wrap(item, name + ".results"));
+	public void accept(Request<T> t) {
+		T value = item.get();
+		//System.out.println("name: " + name + ",Thread: " + Thread.currentThread().getName() + ", value: " + value.toString());
+		
 	}
 	
 }
