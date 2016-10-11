@@ -27,4 +27,11 @@ public class Observation {
 	public Duration getDuration() {
 		return duration;
 	}
+
+	@Override
+	public String toString() {
+		return "Observation [value=" + value + ", type=" + value.getClass().getCanonicalName() + ", time=" + time + ", duration=" + duration + "]";
+	}
+	
+	
 }

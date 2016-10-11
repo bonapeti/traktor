@@ -1,24 +1,27 @@
 package org.traktor.domain.sampling;
 
 import java.io.Serializable;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import org.traktor.domain.Observation;
+import org.traktor.domain.Request;
 
+import reactor.core.publisher.Flux;
 
-import reactor.core.Cancellation;
-
-public class Sampling<T> implements Serializable{
+public class Sampling<T> implements Serializable, Consumer<Observation>{
 
 	private static final long serialVersionUID = 1840597639832443897L;
 	
 	private final String name;
-	private Observation lastObservation;
-	private final Cancellation cancellation;
+	private final Flux<Request<T>> requests;
+	private AtomicReference<Observation> lastObservation = new AtomicReference<Observation>(null);
 	
-	public Sampling(String name, Cancellation cancellation) {
+	public Sampling(String name, Flux<Request<T>> requests, Flux<Observation> lastObservation) {
 		super();
 		this.name = name;
-		this.cancellation = cancellation;
+		this.requests = requests;
+		lastObservation.subscribe(this);
 	}
 
 	@Override
@@ -51,8 +54,15 @@ public class Sampling<T> implements Serializable{
 	}
 
 	public Observation getLastObservation() {
-		return lastObservation;
+		return lastObservation.get();
+	}
+
+	@Override
+	public void accept(Observation t) {
+		lastObservation.set(t);
 	}
 	
-	
+	public void start() {
+		requests.subscribe();
+	}
 }

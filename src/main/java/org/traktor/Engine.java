@@ -1,5 +1,8 @@
 package org.traktor;
 
+import java.lang.management.ManagementFactory;
+
+import org.apache.catalina.mbeans.MBeanFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -16,7 +19,6 @@ import org.traktor.domain.sampling.Scheduler;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.TopicProcessor;
 
 
@@ -37,14 +39,6 @@ public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner
 	
 	@Autowired
 	private Meter monitoringRequests;
-	
-	/*@Autowired
-	private Timer timer;
-	
-	@Bean
-	public Timer timer() {
-		return Timer.create();
-	}*/
 	
 	@Bean
 	public TopicProcessor<Request<?>> requestTopic() {
@@ -72,23 +66,16 @@ public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner
 		
 		requestTopic.subscribe(i -> monitoringRequests.mark()); 
 		
-		//Objects.requireNonNull(timer);
 		long period = 10;
 		
-		scheduler.schedule("traktor.local.internal.request.rate.15min", () -> monitoringRequests.getFifteenMinuteRate() , period);
-		scheduler.schedule("traktor.local.internal.request.rate.5min", () -> monitoringRequests.getFiveMinuteRate() , period);
-		scheduler.schedule("traktor.local.internal.request.rate.1min", () -> monitoringRequests.getOneMinuteRate(), period);
-		scheduler.schedule("traktor.local.internal.request.rate.mean", () -> monitoringRequests.getMeanRate(), period);
+		//scheduler.schedule("traktor.local.internal.request.rate.15min", () -> monitoringRequests.getFifteenMinuteRate() , period);
+		//scheduler.schedule("traktor.local.internal.request.rate.5min", () -> monitoringRequests.getFiveMinuteRate() , period);
+		//scheduler.schedule("traktor.local.internal.request.rate.1min", () -> monitoringRequests.getOneMinuteRate(), period);
+		//scheduler.schedule("traktor.local.internal.request.rate.mean", () -> monitoringRequests.getMeanRate(), period);
+		scheduler.schedule("traktor.local.internal.jvm.os.systemload", () -> ManagementFactory.getOperatingSystemMXBean().getSystemLoadAverage() , period);
+		scheduler.schedule("traktor.test", () -> 1000, period);
 		scheduler.schedule("traktor.local.internal.items.count", () -> scheduler.size() , period);
 		
-		/*timer.schedulePeriodically(new Runnable() {
-			
-			@Override
-			public void run() {
-				System.out.println(new Date());
-				
-			}
-		}, 0, 1, TimeUnit.SECONDS);*/
 	}
 
 	

@@ -1,5 +1,6 @@
 package org.traktor.domain.sampling;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
@@ -7,8 +8,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -16,18 +18,19 @@ import org.springframework.web.bind.annotation.RestController;
 import org.traktor.domain.Observation;
 import org.traktor.domain.Request;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
+
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.TopicProcessor;
 import reactor.core.scheduler.Schedulers;
 
 
 @RestController
 public class Scheduler {
 
-	private Set<Sampling<?>> samplings = Collections.newSetFromMap(new ConcurrentHashMap<Sampling<?>,Boolean>());
+	private MetricRegistry metrics = new MetricRegistry();
 	
-	@Autowired
-	private TopicProcessor<Request<?>> requestTopic;
+	private Set<Sampling<?>> samplings = Collections.newSetFromMap(new ConcurrentHashMap<Sampling<?>,Boolean>());
 	
 	@RequestMapping(value="/sampling", method=RequestMethod.GET)
     public Collection<Sampling<?>> samplings() {
@@ -58,11 +61,27 @@ public class Scheduler {
 		return samplings.size();
 	}
 	
-	public <T> void schedule(String name, Supplier<T> supplier, long secondPeriod) {
+	public <T> void schedule(String name, final Supplier<T> supplier, long secondPeriod) {
 
-		Flux<Request<T>> flux = Flux.intervalMillis(0l, 1000l * secondPeriod).map((time) ->  new Request<T>(Instant.now(), supplier)).publishOn(Schedulers.parallel()).log();
 		
-		Sampling<T> sampling = new Sampling<T>(name, flux.subscribe(new AlarmClock<T>(supplier, name)));
+		Timer timer = metrics.timer(name);
+		
+		Flux<Request<T>> requests = Flux.intervalMillis(0l, 1000l * secondPeriod)
+				.map((time) ->  new Request<T>(Instant.now(), supplier))
+				.publishOn(Schedulers.parallel());
+		
+		Flux<Observation> observations = requests.map((request) -> {
+			Instant when = Instant.now();
+			Timer.Context timerContext = timer.time();
+			Object value = supplier.get();
+			long measurementDuration = timerContext.stop();
+			return new Observation(value, when, Duration.ofNanos(measurementDuration));
+		}).log();
+		
+		Sampling<T> sampling = new Sampling<T>(name, requests, observations);
+		
+		sampling.start();
+		
 		samplings.add(sampling);
 	}
 	
