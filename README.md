@@ -1,21 +1,36 @@
 # traktor
 
-generated using Luminus version "2.9.11.14"
+FIXME: description
 
-FIXME
+## Installation
 
-## Prerequisites
+Download from http://example.com/FIXME.
 
-You will need [Leiningen][1] 2.0 or above installed.
+## Usage
 
-[1]: https://github.com/technomancy/leiningen
+FIXME: explanation
 
-## Running
+    $ java -jar traktor-0.1.0-standalone.jar [args]
 
-To start a web server for the application, run:
+## Options
 
-    lein run
+FIXME: listing of options this app accepts.
+
+## Examples
+
+...
+
+### Bugs
+
+...
+
+### Any Other Sections
+### That You Think
+### Might be Useful
 
 ## License
 
 Copyright © 2016 FIXME
+
+Distributed under the Eclipse Public License either version 1.0 or (at
+your option) any later version.
