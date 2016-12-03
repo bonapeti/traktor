@@ -5,7 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies 
   	[[org.clojure/clojure "1.8.0"]
-	 [io.reactivex/rxclojure "1.0.0"]
+	 [io.projectreactor/reactor-core "3.0.3.RELEASE"]
 	]
   :main ^:skip-aot traktor.core
   :target-path "target/%s"
