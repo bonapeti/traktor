@@ -68,12 +68,12 @@ public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner
 		
 		long period = 10;
 		
-		//scheduler.schedule("traktor.local.internal.request.rate.15min", () -> monitoringRequests.getFifteenMinuteRate() , period);
-		//scheduler.schedule("traktor.local.internal.request.rate.5min", () -> monitoringRequests.getFiveMinuteRate() , period);
-		//scheduler.schedule("traktor.local.internal.request.rate.1min", () -> monitoringRequests.getOneMinuteRate(), period);
-		//scheduler.schedule("traktor.local.internal.request.rate.mean", () -> monitoringRequests.getMeanRate(), period);
-		scheduler.schedule("traktor.local.internal.jvm.os.systemload", () -> ManagementFactory.getOperatingSystemMXBean().getSystemLoadAverage() , period);
-		scheduler.schedule("traktor.test", () -> 1000, period);
+		scheduler.schedule("traktor.local.internal.request.rate.15min", () -> monitoringRequests.getFifteenMinuteRate() , period);
+		scheduler.schedule("traktor.local.internal.request.rate.5min", () -> monitoringRequests.getFiveMinuteRate() , period);
+		scheduler.schedule("traktor.local.internal.request.rate.1min", () -> monitoringRequests.getOneMinuteRate(), period);
+		scheduler.schedule("traktor.local.internal.request.rate.mean", () -> monitoringRequests.getMeanRate(), period);
+		scheduler.schedule("traktor.local.internal.jvm.threads.count", () -> ManagementFactory.getThreadMXBean().getThreadCount() , period);
+
 		scheduler.schedule("traktor.local.internal.items.count", () -> scheduler.size() , period);
 		
 	}
