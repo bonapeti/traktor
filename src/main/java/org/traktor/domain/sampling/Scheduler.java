@@ -8,19 +8,21 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
+import org.traktor.domain.LastValue;
 import org.traktor.domain.Observation;
 import org.traktor.domain.Request;
 
+import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 
+import reactor.core.publisher.ConnectableFlux;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
@@ -28,18 +30,22 @@ import reactor.core.scheduler.Schedulers;
 @RestController
 public class Scheduler {
 
-	private MetricRegistry metrics = new MetricRegistry();
+	@Autowired
+	private Meter monitoringRequests;
 	
-	private Set<Sampling<?>> samplings = Collections.newSetFromMap(new ConcurrentHashMap<Sampling<?>,Boolean>());
+	@Autowired
+	private MetricRegistry metrics;
+	
+	private Set<LastValue> samplings = Collections.newSetFromMap(new ConcurrentHashMap<LastValue,Boolean>());
 	
 	@RequestMapping(value="/sampling", method=RequestMethod.GET)
-    public Collection<Sampling<?>> samplings() {
+    public Collection<LastValue> samplings() {
         return samplings;
     }
 	
 	@RequestMapping(value="/sampling/{name}", method=RequestMethod.GET)
-    public Sampling<?> sampling(@PathVariable String name) {
-		for (Sampling<?> sampling : samplings) {
+    public LastValue sampling(@PathVariable String name) {
+		for (LastValue sampling : samplings) {
 			if (name.equals(sampling.getName())) {
 				return sampling;
 			}
@@ -70,19 +76,21 @@ public class Scheduler {
 				.map((time) ->  new Request<T>(Instant.now(), supplier))
 				.publishOn(Schedulers.parallel());
 		
-		Flux<Observation> observations = requests.map((request) -> {
+		ConnectableFlux<Observation> observations = requests.map((request) -> {
+			monitoringRequests.mark();
 			Instant when = Instant.now();
 			Timer.Context timerContext = timer.time();
 			Object value = supplier.get();
 			long measurementDuration = timerContext.stop();
 			return new Observation(value, when, Duration.ofNanos(measurementDuration));
-		}).log();
+		}).publish();
 		
-		Sampling<T> sampling = new Sampling<T>(name, requests, observations);
+		LastValue lastValue = new LastValue(name);
+		observations.subscribe(lastValue);
 		
-		sampling.start();
+		samplings.add(lastValue);
 		
-		samplings.add(sampling);
+		observations.connect();
 	}
 	
 }
