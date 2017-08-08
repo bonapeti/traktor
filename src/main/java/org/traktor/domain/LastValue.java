@@ -9,7 +9,7 @@ public class LastValue implements Serializable, Consumer<Observation>{
 	private static final long serialVersionUID = 1840597639832443897L;
 	
 	private final String name;
-	private AtomicReference<Observation> lastObservation = new AtomicReference<Observation>(null);
+	private AtomicReference<Observation> lastObservation = new AtomicReference<>(null);
 	
 	public LastValue(String name) {
 		super();
@@ -45,7 +45,7 @@ public class LastValue implements Serializable, Consumer<Observation>{
 		return name;
 	}
 
-	public Observation getLastObservation() {
+	public Observation getLast() {
 		return lastObservation.get();
 	}
 

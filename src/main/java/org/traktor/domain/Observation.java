@@ -3,9 +3,12 @@ package org.traktor.domain;
 import java.time.Duration;
 import java.time.Instant;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 public class Observation {
 	
 	private final Object value;
+	@JsonFormat(pattern="yyyy-MM-dd hh:mm:ss")
 	private final Instant time;
 	private final Duration duration;
 	
@@ -20,6 +23,7 @@ public class Observation {
 		return value;
 	}
 
+	
 	public Instant getTime() {
 		return time;
 	}

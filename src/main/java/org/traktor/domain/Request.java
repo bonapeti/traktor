@@ -1,22 +1,21 @@
 package org.traktor.domain;
 
 import java.time.Instant;
-import java.util.function.Supplier;
 
 public class Request<R> {
 
 	private final Instant when;
-	private final Supplier<R> supplier;
+	private final Sampler<R> sampler;
 	
-	public Request(Instant when, Supplier<R> supplier) {
+	public Request(Instant when, Sampler<R> sampler) {
 		super();
 		this.when = when;
-		this.supplier = supplier;
+		this.sampler = sampler;
 	}
 
 	@Override
 	public String toString() {
-		return "Request [when=" + when + ", supplier=" + supplier + "]";
+		return "Request [when=" + when + ", sampler=" + sampler + "]";
 	}
 	
 	

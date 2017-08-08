@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.traktor.domain.LastValue;
 import org.traktor.domain.Observation;
 import org.traktor.domain.Request;
+import org.traktor.domain.Sampler;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
@@ -32,6 +33,9 @@ public class Scheduler {
 
 	@Autowired
 	private Meter monitoringRequests;
+	
+	@Autowired
+	private Meter monitoringErrors;
 	
 	@Autowired
 	private MetricRegistry metrics;
@@ -55,7 +59,7 @@ public class Scheduler {
 	
 	@RequestMapping(value="/sampling/{name}/last", method=RequestMethod.GET)
     public Observation lastObservation(@PathVariable String name) {
-		return sampling(name).getLastObservation();
+		return sampling(name).getLast();
     }
 	
 	@RequestMapping(value="/sampling/{name}/last/value", method=RequestMethod.GET)
@@ -67,22 +71,27 @@ public class Scheduler {
 		return samplings.size();
 	}
 	
-	public <T> void schedule(String name, final Supplier<T> supplier, long secondPeriod) {
+	public <T> void schedule(String name, final Sampler<T> sampler, long secondPeriod) {
 
 		
 		Timer timer = metrics.timer(name);
 		
-		Flux<Request<T>> requests = Flux.intervalMillis(0l, 1000l * secondPeriod)
-				.map((time) ->  new Request<T>(Instant.now(), supplier))
-				.publishOn(Schedulers.parallel());
+		Flux<Request<T>> requests = Flux.interval(Duration.ZERO, Duration.ofSeconds(secondPeriod))
+				.map((time) ->  new Request<T>(Instant.now(), sampler))
+				.publishOn(Schedulers.elastic());
 		
 		ConnectableFlux<Observation> observations = requests.map((request) -> {
 			monitoringRequests.mark();
 			Instant when = Instant.now();
 			Timer.Context timerContext = timer.time();
-			Object value = supplier.get();
-			long measurementDuration = timerContext.stop();
-			return new Observation(value, when, Duration.ofNanos(measurementDuration));
+			
+			try {
+				T value = sampler.takeSample();
+				return new Observation(value, when, Duration.ofNanos(timerContext.stop()));
+			} catch (Exception e) {
+				monitoringErrors.mark();
+				return new Observation(e.getClass().getName() + ": " + e.getMessage(), when, null);
+			} 
 		}).publish();
 		
 		LastValue lastValue = new LastValue(name);
