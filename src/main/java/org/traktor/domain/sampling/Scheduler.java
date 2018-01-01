@@ -6,8 +6,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -100,26 +98,6 @@ public class Scheduler {
 		samplings.add(lastValue);
 		
 		observations.connect();
-	}
-	
-}
-
-class AlarmClock<T> implements Consumer<Request<T>> {
-
-	private final Supplier<T> item;
-	private final String name;
-	
-	public AlarmClock(Supplier<T> item, String name) {
-		super();
-		this.item = item;
-		this.name = name;
-	}
-	
-	@Override
-	public void accept(Request<T> t) {
-		T value = item.get();
-		//System.out.println("name: " + name + ",Thread: " + Thread.currentThread().getName() + ", value: " + value.toString());
-		
 	}
 	
 }

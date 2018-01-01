@@ -60,18 +60,14 @@
 		<dependency>
 			<groupId>io.dropwizard.metrics</groupId>
 			<artifactId>metrics-jvm</artifactId>
-			<version>3.2.3</version>
+			<version>4.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>io.riemann</groupId>
 			<artifactId>riemann-java-client</artifactId>
-			<version>0.4.2</version>
+			<version>0.4.5</version>
 		</dependency>
-		<dependency>
-			<groupId>msci</groupId>
-	<artifactId>appcheckout</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
-		</dependency>
+		
 	</dependencies>
 	<name>Traktor Engine</name>
 
