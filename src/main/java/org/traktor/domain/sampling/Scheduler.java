@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.mpierce.metrics.reservoir.hdrhistogram.HdrHistogramReservoir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,6 +20,7 @@ import org.traktor.domain.Sampler;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.MetricRegistry.MetricSupplier;
 import com.codahale.metrics.Timer;
 
 import reactor.core.publisher.ConnectableFlux;
@@ -72,7 +74,13 @@ public class Scheduler {
 	public <T> void schedule(String name, final Sampler<T> sampler, long secondPeriod) {
 
 		
-		Timer timer = metrics.timer(name);
+		Timer timer = metrics.timer(name, new MetricSupplier<Timer>() {
+			
+			@Override
+			public Timer newMetric() {
+				return new Timer(new HdrHistogramReservoir());
+			}
+		});
 		
 		Flux<Request<T>> requests = Flux.interval(Duration.ZERO, Duration.ofSeconds(secondPeriod))
 				.map((time) ->  new Request<T>(Instant.now(), sampler))

@@ -25,6 +25,7 @@ import org.traktor.domain.sampling.Scheduler;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.jmx.JmxReporter;
 
 import reactor.core.publisher.TopicProcessor;
 
@@ -49,6 +50,9 @@ public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner
 	
 	@Autowired
 	private Meter monitoringErrors;
+	
+	@Autowired
+	private MetricRegistry metrics;
 	
 	
 	@Bean
@@ -80,7 +84,8 @@ public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner
 	
 	@Override
 	public void run(String... arg0) throws Exception {
-		
+		final JmxReporter reporter = JmxReporter.forRegistry(metrics).build();
+		reporter.start();
 		
 		
 		requestTopic.subscribe(i -> monitoringRequests.mark()); 
