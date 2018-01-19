@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.mpierce.metrics.reservoir.hdrhistogram.HdrHistogramReservoir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -46,16 +47,16 @@ public class Scheduler {
 	@Autowired
 	private MetricRegistry metrics;
 	
-	private Set<Sampling> samplings = Collections.newSetFromMap(new ConcurrentHashMap<Sampling,Boolean>());
+	private Set<LastValue> samplings = Collections.newSetFromMap(new ConcurrentHashMap<LastValue,Boolean>());
 	
 	@RequestMapping(value="/sampling", method=RequestMethod.GET)
-    public Collection<Sampling> samplings() {
+    public Collection<LastValue> samplings() {
         return samplings;
     }
 	
 	@RequestMapping(value="/sampling/{name}", method=RequestMethod.GET)
-    public Sampling sampling(@PathVariable String name) {
-		for (Sampling sampling : samplings) {
+    public LastValue sampling(@PathVariable String name) {
+		for (LastValue sampling : samplings) {
 			if (name.equals(sampling.getName())) {
 				return sampling;
 			}
@@ -86,7 +87,13 @@ public class Scheduler {
 	public <T> void schedule(String name, final Sampler<T> sampler, long secondPeriod) {
 
 		
-		Timer timer = metrics.timer(name + ".latency");
+		Timer timer = metrics.timer(name + ".latency"), new MetricSupplier<Timer>() {
+			
+			@Override
+			public Timer newMetric() {
+				return new Timer(new HdrHistogramReservoir());
+			}
+		});
 		Meter requestMeter = metrics.meter(name + ".requests");
 		Meter errorMeter = metrics.meter(name + ".errors");
 		

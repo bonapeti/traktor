@@ -14,6 +14,7 @@
 	<properties>
 		<java.version>1.8</java.version>
 		<spring.boot.version>1.5.9.RELEASE</spring.boot.version>
+		<dropwizard.metrics.version>4.0.2</dropwizard.metrics.version>
 	</properties>
 	<build>
 		<pluginManagement>
@@ -55,17 +56,17 @@
 		<dependency>
 			<groupId>io.dropwizard.metrics</groupId>
 			<artifactId>metrics-core</artifactId>
-			<version>4.0.0</version>
+			<version>${dropwizard.metrics.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>io.dropwizard.metrics</groupId>
 			<artifactId>metrics-jvm</artifactId>
-			<version>4.0.0</version>
+			<version>${dropwizard.metrics.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>io.dropwizard.metrics</groupId>
-			<artifactId>metrics-jmx</artifactId>
-			<version>4.0.0</version>
+		    <groupId>io.dropwizard.metrics</groupId>
+    		<artifactId>metrics-jmx</artifactId>
+    		<version>${dropwizard.metrics.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>io.riemann</groupId>
@@ -77,6 +78,11 @@
   <artifactId>influxdb-java</artifactId>
   <version>2.8</version>
 </dependency>
+		<dependency>
+		<groupId>org.mpierce.metrics.reservoir</groupId>
+			<artifactId>hdrhistogram-metrics-reservoir</artifactId>
+			<version>1.1.2</version>
+		</dependency>
 		
 	</dependencies>
 	<name>Traktor Engine</name>
