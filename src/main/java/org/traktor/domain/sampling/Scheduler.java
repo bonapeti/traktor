@@ -13,14 +13,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
-import org.traktor.domain.Sampling;
 import org.traktor.domain.Observation;
 import org.traktor.domain.Request;
 import org.traktor.domain.Sampler;
-import org.traktor.domain.riemann.Riemann;
+import org.traktor.domain.Sampling;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.MetricRegistry.MetricSupplier;
 import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.Timer;
 
@@ -47,16 +47,16 @@ public class Scheduler {
 	@Autowired
 	private MetricRegistry metrics;
 	
-	private Set<LastValue> samplings = Collections.newSetFromMap(new ConcurrentHashMap<LastValue,Boolean>());
+	private Set<Sampling> samplings = Collections.newSetFromMap(new ConcurrentHashMap<Sampling,Boolean>());
 	
 	@RequestMapping(value="/sampling", method=RequestMethod.GET)
-    public Collection<LastValue> samplings() {
+    public Collection<Sampling> samplings() {
         return samplings;
     }
 	
 	@RequestMapping(value="/sampling/{name}", method=RequestMethod.GET)
-    public LastValue sampling(@PathVariable String name) {
-		for (LastValue sampling : samplings) {
+    public Sampling sampling(@PathVariable String name) {
+		for (Sampling sampling : samplings) {
 			if (name.equals(sampling.getName())) {
 				return sampling;
 			}
@@ -87,7 +87,7 @@ public class Scheduler {
 	public <T> void schedule(String name, final Sampler<T> sampler, long secondPeriod) {
 
 		
-		Timer timer = metrics.timer(name + ".latency"), new MetricSupplier<Timer>() {
+		Timer timer = metrics.timer(name + ".latency", new MetricSupplier<Timer>() {
 			
 			@Override
 			public Timer newMetric() {

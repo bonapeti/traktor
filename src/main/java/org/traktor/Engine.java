@@ -38,10 +38,6 @@ public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner
 	}
 	
 	@Autowired
-	private TopicProcessor<Request<?>> requestTopic;
-	
-	
-	@Autowired
 	private TopicProcessor<Observation> resultTopic;
 	
 	@Autowired
@@ -60,12 +56,6 @@ public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner
 	
 	@Autowired
 	private Meter monitoringErrors;
-	
-	@Bean
-	public TopicProcessor<Request<?>> requestTopic() {
-		return TopicProcessor.share("requestTopic", 256);
-	}
-	
 	
 	@Bean
 	public TopicProcessor<Observation> resultTopic() {
@@ -103,8 +93,6 @@ public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner
 	public void run(String... arg0) throws Exception {
 		JmxReporter.forRegistry(metrics).build().start();
 		resultTopic.subscribe(influxDBOutput);
-		
-		//requestTopic.subscribe(i -> monitoringRequests.mark()); 
 		
 		long period = 10;
 		

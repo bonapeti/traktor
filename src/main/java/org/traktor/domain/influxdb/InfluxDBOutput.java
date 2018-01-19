@@ -1,6 +1,5 @@
 package org.traktor.domain.influxdb;
 
-import java.time.temporal.TemporalUnit;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
