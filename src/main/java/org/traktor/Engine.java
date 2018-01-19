@@ -2,13 +2,9 @@ package org.traktor;
 
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.regex.Pattern;
 
-import org.apache.catalina.mbeans.MBeanFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -19,14 +15,17 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
-import org.traktor.domain.Request;
+import org.traktor.domain.Observation;
+import org.traktor.domain.influxdb.InfluxDBOutput;
 import org.traktor.domain.net.OpenSocket;
 import org.traktor.domain.sampling.Scheduler;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.jmx.JmxReporter;
 
 import reactor.core.publisher.TopicProcessor;
+import reactor.util.concurrent.WaitStrategy;
 
 
 @SpringBootApplication
@@ -39,10 +38,18 @@ public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner
 	}
 	
 	@Autowired
-	private TopicProcessor<Request<?>> requestTopic;
+	private TopicProcessor<Observation> resultTopic;
+	
+	@Autowired
+	private MetricRegistry metrics;
 	
 	@Autowired
 	private Scheduler scheduler;
+	
+	@Autowired
+	private InfluxDBOutput influxDBOutput;
+	
+	
 	
 	@Autowired
 	private Meter monitoringRequests;
@@ -52,8 +59,13 @@ public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner
 	
 	
 	@Bean
-	public TopicProcessor<Request<?>> requestTopic() {
-		return TopicProcessor.share("requestTopic", 256);
+	public TopicProcessor<Observation> resultTopic() {
+		return TopicProcessor.<Observation>builder().
+				name("resultTopic").
+				share(true).
+				bufferSize(1024).			
+				waitStrategy(WaitStrategy.blocking()).
+				build();
 	}
 	
 	@Bean
@@ -80,10 +92,10 @@ public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner
 	
 	@Override
 	public void run(String... arg0) throws Exception {
+		JmxReporter.forRegistry(metrics).build().start();
+		resultTopic.subscribe(influxDBOutput);
 		
-		
-		
-		requestTopic.subscribe(i -> monitoringRequests.mark()); 
+		//requestTopic.subscribe(i -> monitoringRequests.mark()); 
 		
 		long period = 10;
 		

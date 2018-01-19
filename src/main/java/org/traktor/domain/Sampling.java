@@ -4,16 +4,21 @@ import java.io.Serializable;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-public class LastValue implements Serializable, Consumer<Observation>{
+import com.codahale.metrics.Snapshot;
+import com.codahale.metrics.Timer;
+
+public class Sampling implements Serializable, Consumer<Observation>{
 
 	private static final long serialVersionUID = 1840597639832443897L;
 	
 	private final String name;
 	private AtomicReference<Observation> lastObservation = new AtomicReference<>(null);
+	private final Timer latencyTimer;
 	
-	public LastValue(String name) {
+	public Sampling(String name, Timer latencyTimer) {
 		super();
 		this.name = name;
+		this.latencyTimer = latencyTimer;
 	}
 
 	@Override
@@ -32,7 +37,7 @@ public class LastValue implements Serializable, Consumer<Observation>{
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		LastValue other = (LastValue) obj;
+		Sampling other = (Sampling) obj;
 		if (name == null) {
 			if (other.name != null)
 				return false;
@@ -54,4 +59,7 @@ public class LastValue implements Serializable, Consumer<Observation>{
 		lastObservation.set(t);
 	}
 
+	public Snapshot getLatency() {
+		return latencyTimer.getSnapshot();
+	}
 }
