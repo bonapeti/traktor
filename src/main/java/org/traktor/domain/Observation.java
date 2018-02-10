@@ -40,8 +40,10 @@ public class Observation {
 
 	@Override
 	public String toString() {
-		return "Observation [value=" + value + ", type=" + value.getClass().getCanonicalName() + ", time=" + time + ", duration=" + duration + "]";
+		return "Observation [name=" + name + ", value=" + value + ", time=" + time + ", duration=" + duration + "]";
 	}
+
+	
 	
 	
 }

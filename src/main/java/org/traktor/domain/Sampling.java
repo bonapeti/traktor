@@ -7,18 +7,25 @@ import java.util.function.Consumer;
 import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.Timer;
 
-public class Sampling implements Serializable, Consumer<Observation>{
+import reactor.core.publisher.ConnectableFlux;
+import reactor.core.publisher.Flux;
+
+public class Sampling<T> implements Serializable, Consumer<Observation>{
 
 	private static final long serialVersionUID = 1840597639832443897L;
 	
 	private final String name;
 	private AtomicReference<Observation> lastObservation = new AtomicReference<>(null);
 	private final Timer latencyTimer;
+	private final Flux<Request<T>> requests;
+	private final ConnectableFlux<Observation> observations;
 	
-	public Sampling(String name, Timer latencyTimer) {
+	public Sampling(String name, Timer latencyTimer, Flux<Request<T>> requests, ConnectableFlux<Observation> observations) {
 		super();
 		this.name = name;
 		this.latencyTimer = latencyTimer;
+		this.requests = requests;
+		this.observations = observations;
 	}
 
 	@Override
@@ -62,4 +69,11 @@ public class Sampling implements Serializable, Consumer<Observation>{
 	public Snapshot getLatency() {
 		return latencyTimer.getSnapshot();
 	}
+
+	@Override
+	public String toString() {
+		return "Sampling [name=" + name + ", lastObservation=" + lastObservation + "]";
+	}
+	
+	
 }

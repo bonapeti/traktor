@@ -84,7 +84,7 @@ public class Scheduler {
 	}
 	
 	
-	public <T> void schedule(String name, final Sampler<T> sampler, long secondPeriod) {
+	public <T> void schedule(final String name, final Sampler<T> sampler, long secondPeriod) {
 
 		
 		Timer timer = metrics.timer(name + ".latency", new MetricSupplier<Timer>() {
@@ -94,16 +94,16 @@ public class Scheduler {
 				return new Timer(new HdrHistogramReservoir());
 			}
 		});
-		Meter requestMeter = metrics.meter(name + ".requests");
 		Meter errorMeter = metrics.meter(name + ".errors");
 		
 		
 		Flux<Request<T>> requests = Flux.interval(Duration.ZERO, Duration.ofSeconds(secondPeriod))
 				.map((time) ->  new Request<T>(Instant.now(), sampler))
-				.publishOn(Schedulers.elastic());
+				.publishOn(Schedulers.elastic())
+				.log();
 		
 		ConnectableFlux<Observation> observations = requests.map((request) -> {
-			requestMeter.mark();
+
 			Instant when = Instant.now();
 			Timer.Context timerContext = timer.time();
 			
@@ -114,15 +114,18 @@ public class Scheduler {
 				errorMeter.mark();
 				return new Observation(name, e.getClass().getName() + ": " + e.getMessage(), when, null);
 			} 
-		}).publish();
+		})
+				//.publishOn(Schedulers.elastic())
+				.log().publish();
 		
 		
-		Sampling lastValue = new Sampling(name, timer);
-		resultTopic.subscribe(lastValue);
+		Sampling sampling = new Sampling(name, timer, requests, observations);
 		
 		observations.subscribe(resultTopic);
+		observations.subscribe(sampling);
 		
-		samplings.add(lastValue);
+		
+		samplings.add(sampling);
 		
 		observations.connect();
 	}

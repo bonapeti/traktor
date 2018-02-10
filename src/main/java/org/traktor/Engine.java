@@ -24,6 +24,7 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.jmx.JmxReporter;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.TopicProcessor;
 import reactor.util.concurrent.WaitStrategy;
 
@@ -59,12 +60,7 @@ public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner
 	
 	@Bean
 	public TopicProcessor<Observation> resultTopic() {
-		return TopicProcessor.<Observation>builder().
-				name("resultTopic").
-				share(true).
-				bufferSize(1024).			
-				waitStrategy(WaitStrategy.blocking()).
-				build();
+		return TopicProcessor.share("results", 1024);
 	}
 	
 	@Bean

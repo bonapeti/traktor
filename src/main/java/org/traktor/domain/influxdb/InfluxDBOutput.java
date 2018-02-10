@@ -3,15 +3,22 @@ package org.traktor.domain.influxdb;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import org.apache.log4j.Logger;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDB.LogLevel;
 import org.influxdb.InfluxDBFactory;
 import org.influxdb.dto.Point;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.traktor.domain.Observation;
+
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
+
+import okhttp3.OkHttpClient;
 
 @Component
 public class InfluxDBOutput implements Consumer<Observation>, InitializingBean, DisposableBean {
@@ -23,6 +30,27 @@ public class InfluxDBOutput implements Consumer<Observation>, InitializingBean, 
 	
 	@Value("${influxdb.port}")
 	int port;
+	
+	@Autowired
+	private MetricRegistry metrics;
+	
+	public InfluxDBOutput() {
+		
+	}
+	
+	public InfluxDBOutput(String host, int port, MetricRegistry metricRegistry) {
+		this.host = host;
+		this.port = port;
+		this.metrics = metricRegistry;
+	}
+	
+	private Meter errorMeter;
+	
+	private volatile boolean shuttingDown = false;
+	
+	private static Logger logger = Logger.getLogger(InfluxDBOutput.class);
+	
+	
 	
 	@Override
 	public void accept(Observation t) {
@@ -39,19 +67,33 @@ public class InfluxDBOutput implements Consumer<Observation>, InitializingBean, 
 			pointBuilder = pointBuilder.addField("value", (Boolean)t.getValue());
 		}
 		
-		influxDB.write(pointBuilder.build());
+			try  {
+				influxDB.write(pointBuilder.build());
+			} catch (Exception e) {
+				errorMeter.mark();
+				logger.warn("Failed to connect to InfluxDB", e);
+			}	
+		
+		
 	}
 
 	@Override
 	public void destroy() throws Exception {
+		influxDB.close();
 	}
 
 	@Override
 	public void afterPropertiesSet() throws Exception {
-		influxDB = InfluxDBFactory.connect("http://" + host + ":" + port,"root", "root");
-		influxDB.setLogLevel(LogLevel.FULL);
-		influxDB.setDatabase("mydb");
-		influxDB.createRetentionPolicy("autogen", "mydb", "30d", "30m", 2, true);
+		errorMeter = metrics.meter("influxDB.error");
+		try {
+			OkHttpClient.Builder httpClientBuilder = new OkHttpClient.Builder().connectTimeout(1, TimeUnit.SECONDS);
+			influxDB = InfluxDBFactory.connect("http://" + host + ":" + port,"root", "root", httpClientBuilder);
+			influxDB.setLogLevel(LogLevel.FULL);
+			influxDB.setDatabase("mydb");
+		} catch (Exception ex) {
+			logger.warn("Failed to connect to InfluxDB", ex);
+		}
 	}
+
 
 }
