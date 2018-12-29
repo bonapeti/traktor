@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traktor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traktor
+  template:
+    metadata:
+      labels:
+        app: traktor
+    spec:
+      containers:
+      - name: traktor
+        image: bonapetiazureacr.azurecr.io/traktor:1.0
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 250m
+            memory: 512Mi
+        ports:
+        - containerPort: 8080
+          name: traktor
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traktor
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    app: traktor
+    
