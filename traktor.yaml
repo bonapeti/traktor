@@ -14,21 +14,13 @@ spec:
     spec:
       containers:
       - name: traktor
-        image: bonapetiazureacr.azurecr.io/traktor:1.1
-#        livenessProbe:
-#          httpGet:
-#            path: /healthy
-#            port: 8080
-#          initialDelaySeconds: 5
-#          timeoutSeconds: 1
-#          periodSeconds: 10
-#          failureThreshold: 3
+        image: bonapetiazureacr.azurecr.io/traktor:1.2
         resources:
           requests:
-            cpu: 100m
+            cpu: 250m
             memory: 256Mi
           limits:
-            cpu: 250m
+            cpu: 500m
             memory: 512Mi
         ports:
         - containerPort: 8080
@@ -45,4 +37,3 @@ spec:
     targetPort: 8080
   selector:
     app: traktor
-    
