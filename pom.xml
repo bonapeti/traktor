@@ -106,5 +106,9 @@
 			<id>clojars.org</id>
 			<url>http://clojars.org/repo</url>
 		</repository>
+		<repository>
+                        <id>bintray</id>
+                        <url>http://jcenter.bintray.com/</url>
+		</repository>
 	</repositories>
 </project>
