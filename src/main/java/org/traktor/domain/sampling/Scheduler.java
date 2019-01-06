@@ -99,8 +99,7 @@ public class Scheduler {
 		
 		Flux<Request<T>> requests = Flux.interval(Duration.ZERO, Duration.ofSeconds(secondPeriod))
 				.map((time) ->  new Request<T>(Instant.now(), sampler))
-				.publishOn(Schedulers.elastic())
-				.log();
+				.publishOn(Schedulers.elastic());
 		
 		ConnectableFlux<Observation> observations = requests.map((request) -> {
 
@@ -116,7 +115,8 @@ public class Scheduler {
 			} 
 		})
 				//.publishOn(Schedulers.elastic())
-				.log().publish();
+				//.log()
+				.publish();
 		
 		
 		Sampling sampling = new Sampling(name, timer, requests, observations);

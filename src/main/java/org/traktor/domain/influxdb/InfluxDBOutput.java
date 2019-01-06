@@ -71,10 +71,14 @@ public class InfluxDBOutput implements Consumer<Observation>, InitializingBean, 
 				influxDB.write(pointBuilder.build());
 			} catch (Exception e) {
 				errorMeter.mark();
-				logger.warn("Failed to connect to InfluxDB", e);
+				logConnectionError(e);
 			}	
 		
 		
+	}
+
+	private void logConnectionError(Exception e) {
+		logger.warn("Failed to connect to InfluxDB: " + e.getMessage());
 	}
 
 	@Override
@@ -91,7 +95,7 @@ public class InfluxDBOutput implements Consumer<Observation>, InitializingBean, 
 			influxDB.setLogLevel(LogLevel.FULL);
 			influxDB.setDatabase("mydb");
 		} catch (Exception ex) {
-			logger.warn("Failed to connect to InfluxDB", ex);
+			logConnectionError(ex);
 		}
 	}
 

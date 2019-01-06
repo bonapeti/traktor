@@ -5,6 +5,7 @@ import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
 import java.util.regex.Pattern;
 
+import org.apache.log4j.Logger;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -13,6 +14,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 import org.traktor.domain.Observation;
@@ -30,7 +36,10 @@ import reactor.util.concurrent.WaitStrategy;
 
 
 @SpringBootApplication
+@RestController
 public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner, ApplicationContextAware {
+	
+	private static Logger logger = Logger.getLogger(Engine.class);
 	
 	ApplicationContext applicationContext;
 	
@@ -120,8 +129,15 @@ public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner
 		
 	}
 
+	@RequestMapping(value="/healthy", method = RequestMethod.GET)
+	public ResponseEntity<?> healthy() {
+		logger.warn("Health check");
+		return new ResponseEntity<>(HttpStatus.OK);	
+	}
+
 	
-		@Override
+	
+	@Override
 	public void setApplicationContext(ApplicationContext applicationContext)
 			throws BeansException {
 		this.applicationContext = applicationContext;
