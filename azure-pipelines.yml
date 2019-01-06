@@ -13,5 +13,7 @@ variables:
   imageName: 'bonapetiazureacr.azurecr.io/traktor:$(build.buildId)'
 
 steps:
+- script: mvn clean install
+  displayName: "Build with Maven"
 - script: docker build -f Dockerfile -t $(imageName) .
   displayName: 'docker build'
