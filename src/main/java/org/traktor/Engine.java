@@ -3,6 +3,7 @@ package org.traktor;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
@@ -30,9 +31,7 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.jmx.JmxReporter;
 
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.TopicProcessor;
-import reactor.util.concurrent.WaitStrategy;
 
 
 @SpringBootApplication
@@ -46,6 +45,21 @@ public class Engine extends WebMvcConfigurerAdapter implements CommandLineRunner
 	public static void main(String[] args) {
 		SpringApplication.run(Engine.class, args);
 	}
+	
+	@RequestMapping(value="/config", produces="text/html")
+	public String config() {
+		StringBuilder html = new StringBuilder();
+		html.append("<html><body><table><tr><th>Name</th><th>Value</th></tr>");
+		for (Map.Entry<String, String> sysEnv : System.getenv().entrySet()) {
+			html.append("<tr>");
+			html.append("<td>").append(sysEnv.getKey()).append("</td>");
+			html.append("<td>").append(sysEnv.getValue()).append("</td>");
+			html.append("</tr>");
+		}
+		html.append("</table></body></html>");
+	    return html.toString();
+	}
+	
 	
 	@Autowired
 	private TopicProcessor<Observation> resultTopic;
